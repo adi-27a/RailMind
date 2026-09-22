@@ -1,0 +1,23 @@
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
+import { randomBytes } from 'node:crypto';
+import type { RealtimeEvent } from '@railmind/contracts';
+import Fastify from 'fastify';
+import { createProviders } from './providers/provider-factory.js';
+import { registerAuthRoutes } from './routes/auth.js';
+import { registerApiRoutes } from './routes/api.js';
+import { AuditLog } from './services/audit-log.js';
+import { AuthService } from './services/auth-service.js';
+import { DependencyHealth } from './services/dependency-health.js';
+type ClientSocket={readyState:number;send:(data:string)=>void;on:(event:string,listener:()=>void)=>void;close:(code?:number,reason?:string)=>void};
+const allowedOrigins=()=> (process.env.WEB_ORIGIN ?? 'http://localhost:5173').split(',').map((origin)=>origin.trim()).filter(Boolean);
+export async function buildApp(){const app=Fastify({logger:{level:process.env.LOG_LEVEL??'info'},requestIdHeader:'x-request-id',trustProxy:process.env.TRUST_PROXY==='true'});const {railway,weather}=createProviders();const clients=new Set<ClientSocket>();const audit=new AuditLog(app.log);const authEnabled=process.env.AUTH_ENABLED==='true';const configuredSecret=process.env.JWT_SECRET;if(authEnabled&&(!configuredSecret||configuredSecret.length<32))throw new Error('JWT_SECRET of at least 32 characters is required when AUTH_ENABLED=true.');const jwtSecret=configuredSecret ?? randomBytes(48).toString('base64url');const auth=new AuthService(app,authEnabled,audit);const dependencies=new DependencyHealth(railway,weather,authEnabled);
+  await app.register(helmet,{contentSecurityPolicy:false,crossOriginResourcePolicy:{policy:'same-site'},hsts:process.env.NODE_ENV==='production'});await app.register(cors,{origin:allowedOrigins(),credentials:false,methods:['GET','POST','DELETE']});await app.register(rateLimit,{max:Number(process.env.RATE_LIMIT_MAX??100),timeWindow:process.env.RATE_LIMIT_WINDOW??'1 minute',errorResponseBuilder:()=>({error:'Rate limit exceeded. Try again shortly.'})});await app.register(jwt,{secret:jwtSecret});await app.register(websocket);
+  app.setErrorHandler((error,request,reply)=>{const cause=error instanceof Error?error:new Error('Unknown request error');const statusCode='statusCode' in cause&&typeof cause.statusCode==='number'?cause.statusCode:500;const status=statusCode<500?statusCode:500;request.log.error({err:cause},'request failed');reply.code(status).send({error:status===500?'Internal server error':cause.message});});
+  await registerAuthRoutes(app,auth,audit);await registerApiRoutes(app,railway,weather,()=>dependencies.snapshot(clients.size));const broadcast=(event:RealtimeEvent)=>{const message=JSON.stringify(event);clients.forEach((client)=>{if(client.readyState===1)client.send(message);});};
+  app.get('/ws',{websocket:true},(socket,request)=>{const origin=request.headers.origin;if(origin&&!allowedOrigins().includes(origin)){socket.close(1008,'Origin not allowed');return;}const client=socket as unknown as ClientSocket;clients.add(client);void Promise.all([railway.getNetworkMetrics(),railway.getLiveTrains(),railway.getAlerts(),weather.getCurrentObservations()]).then(([metrics,trains,alerts,observations])=>{broadcast({type:'snapshot',data:{metrics,trains,alerts,weather:observations}});alerts.forEach((alert)=>broadcast({type:'alert.created',data:alert}));}).catch((error:unknown)=>{audit.record({action:'websocket.snapshot',outcome:'failure',detail:error instanceof Error?error.message:'Provider snapshot failed'});});client.on('close',()=>clients.delete(client));});
+  const timer=setInterval(()=>{const updated=railway.advance();updated.forEach((train)=>{broadcast({type:'train.position.updated',data:train});broadcast({type:'train.status.updated',data:train});});void railway.getNetworkMetrics().then((metrics)=>broadcast({type:'network.metrics.updated',data:metrics})).catch(()=>undefined);void railway.getAlerts().then((alerts)=>alerts.forEach((alert)=>broadcast({type:'alert.updated',data:alert}))).catch(()=>undefined);void weather.getCurrentObservations().then((observations)=>broadcast({type:'weather.updated',data:observations})).catch(()=>undefined);},5000);
+  app.addHook('onClose',async()=>{clearInterval(timer);await dependencies.close();});return app;}

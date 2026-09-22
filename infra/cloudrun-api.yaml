@@ -1,0 +1,19 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: railmind-api
+spec:
+  template:
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/railmind/api:TAG
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: RAILWAY_PROVIDER
+              value: simulation
+            - name: WEATHER_PROVIDER
+              value: simulation
+            # Inject DATABASE_URL, REDIS_URL and provider keys through Secret Manager at deploy time.

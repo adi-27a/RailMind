@@ -1,0 +1,16 @@
+:root {
+  --rm-ink: #071713;
+  --rm-surface: #0d251f;
+  --rm-surface-strong: #0a1d18;
+  --rm-border: #21483a;
+  --rm-text: #eaf7f1;
+  --rm-muted: #91b6a8;
+  --rm-amber: #ffb547;
+  --rm-mint: #42dca3;
+  --rm-blue: #6cc9ff;
+  --rm-danger: #ff6978;
+  --rm-radius-card: 10px;
+  --rm-radius-control: 6px;
+  --rm-font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --rm-font-mono: "JetBrains Mono", ui-monospace, monospace;
+}

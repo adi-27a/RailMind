@@ -1,0 +1,19 @@
+import type { RouteWeather, WeatherForecast, WeatherObservation, WeatherRisk } from '@railmind/contracts';
+import { routes, stations } from './demo-data.js';
+import type { WeatherProvider } from './weather-provider.js';
+const point = (code:string) => stations.find((station) => station.code === code)!;
+export class SimulationWeatherProvider implements WeatherProvider {
+  readonly mode = 'simulation' as const;
+  async getCurrentObservations():Promise<WeatherObservation[]> { const observedAt=new Date().toISOString(); return [
+    { stationCode:'NDLS',condition:'Haze',temperatureC:24,precipitationMm:0,windKph:8,visibilityKm:2.8,severeWeather:false,latitude:point('NDLS').latitude,longitude:point('NDLS').longitude,observedAt,source:this.mode },
+    { stationCode:'MMCT',condition:'Rain',temperatureC:27,precipitationMm:14,windKph:31,visibilityKm:3.5,severeWeather:true,latitude:point('MMCT').latitude,longitude:point('MMCT').longitude,observedAt,source:this.mode },
+    { stationCode:'HWH',condition:'Cloudy',temperatureC:29,precipitationMm:2,windKph:13,visibilityKm:8,severeWeather:false,latitude:point('HWH').latitude,longitude:point('HWH').longitude,observedAt,source:this.mode },
+    { stationCode:'MAS',condition:'Heat',temperatureC:39,precipitationMm:0,windKph:15,visibilityKm:10,severeWeather:false,latitude:point('MAS').latitude,longitude:point('MAS').longitude,observedAt,source:this.mode }
+  ]; }
+  async getForecasts():Promise<WeatherForecast[]> { const observations=await this.getCurrentObservations(); return observations.map((item,index) => ({ ...item,forecastFor:new Date(Date.now()+(index+1)*3_600_000).toISOString(),precipitationProbability:item.condition==='Rain'?80:20 })); }
+  async getWeatherForStation(code:string):Promise<WeatherObservation|undefined> { return (await this.getCurrentObservations()).find((item) => item.stationCode === code); }
+  async getWeatherForRoute(routeId:string):Promise<RouteWeather|undefined> { const route=routes.find((item) => item.id === routeId); if (!route) return undefined; const observations=(await this.getCurrentObservations()).filter((item) => item.stationCode === route.originCode || item.stationCode === route.destinationCode); return { routeId,observations,risk:this.getWeatherRisk(observations),forecasts:(await this.getForecasts()).filter((item) => item.stationCode === route.originCode || item.stationCode === route.destinationCode) }; }
+  async getWeatherForRegion(region:string):Promise<WeatherObservation[]> { const codes=stations.filter((station) => `${station.zone} ${station.state} ${station.city}`.toLowerCase().includes(region.toLowerCase())).map((station) => station.code); return (await this.getCurrentObservations()).filter((item) => codes.includes(item.stationCode)); }
+  async getWeatherForLocation(latitude:number,longitude:number):Promise<WeatherObservation|undefined> { return (await this.getCurrentObservations()).sort((a,b) => Math.hypot(a.latitude-latitude,a.longitude-longitude)-Math.hypot(b.latitude-latitude,b.longitude-longitude))[0]; }
+  getWeatherRisk(observations:WeatherObservation[]):WeatherRisk { const score=Math.min(100,Math.round(observations.reduce((total,item) => total + item.precipitationMm*3 + Math.max(0,5-item.visibilityKm)*9 + Math.max(0,item.temperatureC-36)*4 + item.windKph*.4 + (item.severeWeather?22:0),0) / Math.max(1,observations.length))); const level=score>=70?'severe':score>=45?'high':score>=20?'moderate':'low'; const reasons=observations.flatMap((item) => [item.precipitationMm>=10?`${item.stationCode}: heavy rainfall`:undefined,item.visibilityKm<5?`${item.stationCode}: reduced visibility`:undefined,item.severeWeather?`${item.stationCode}: severe weather signal`:undefined].filter((value): value is string => Boolean(value))); return { level,score,reasons:reasons.length?reasons:['No material weather risk in simulation'],source:this.mode,updatedAt:new Date().toISOString() }; }
+}

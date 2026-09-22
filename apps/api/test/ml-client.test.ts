@@ -1,0 +1,5 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { requestDelayPrediction } from '../src/services/ml-client.js';
+const nativeFetch=globalThis.fetch;
+afterEach(()=>{globalThis.fetch=nativeFetch;vi.restoreAllMocks();});
+describe('ML client',()=>{it('maps Python snake_case inference output to the API contract',async()=>{globalThis.fetch=vi.fn().mockResolvedValue(new Response(JSON.stringify({delay_probability:.72,risk_score:72,risk_level:'high',estimated_delay_minutes:18,confidence:.6,calibration:{method:'synthetic',note:'not real',isSyntheticDevelopmentModel:true},factors:[{name:'rainfall mm',contribution:12,direction:'increases_risk'}],model:'baseline',model_version:'0.2',predicted_at:'2025-01-01T00:00:00Z'}),{status:200}));const result=await requestDelayPrediction({originCode:'NDLS',destinationCode:'MMCT',weather:'rain',congestion:70,reliability:65,departurePeriod:'evening_peak'});expect(result.delayProbability).toBe(.72);expect(result.modelVersion).toBe('0.2');expect(result.source).toBe('simulation');});});

@@ -1,0 +1,3 @@
+import type { RouteWeather, WeatherForecast, WeatherObservation, WeatherRisk } from '@railmind/contracts';
+/** Boundary for a contracted weather provider; credentials remain server-side. */
+export interface WeatherProvider { readonly mode:'simulation'|'authorized'; getCurrentObservations():Promise<WeatherObservation[]>; getForecasts():Promise<WeatherForecast[]>; getWeatherForStation(code:string):Promise<WeatherObservation|undefined>; getWeatherForRoute(routeId:string):Promise<RouteWeather|undefined>; getWeatherForRegion(region:string):Promise<WeatherObservation[]>; getWeatherForLocation(latitude:number,longitude:number):Promise<WeatherObservation|undefined>; getWeatherRisk(observations:WeatherObservation[]):WeatherRisk; }

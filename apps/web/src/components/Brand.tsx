@@ -1,0 +1,1 @@
+export function Brand() { return <div className="brand"><span className="brand-mark" aria-hidden="true">R</span><span><strong>RailMind</strong><small>RAILWAY INTELLIGENCE LAYER</small></span></div>; }

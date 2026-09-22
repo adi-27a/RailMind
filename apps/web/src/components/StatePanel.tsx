@@ -1,0 +1,1 @@
+export function StatePanel({ title, message, action }: { title: string; message: string; action?: () => void }) { return <section className="state-panel"><strong>{title}</strong><p>{message}</p>{action && <button className="button secondary" onClick={action}>Try again</button>}</section>; }

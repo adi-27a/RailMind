@@ -1,0 +1,6 @@
+import type { FeedState } from '@railmind/contracts';
+import { Brand } from './Brand';
+import { DemoBadge } from './Badge';
+export type Page = 'Dashboard' | 'Live Map' | 'Train Intelligence' | 'Delay Predictor' | 'AI Assistant' | 'Operations' | 'Analytics' | 'Stations' | 'Routes' | 'Weather' | 'System Health' | 'Settings';
+const pages:Page[] = ['Dashboard','Live Map','Train Intelligence','Delay Predictor','AI Assistant','Operations','Analytics','Stations','Routes','Weather','System Health','Settings'];
+export function Layout({ page,onPage,state,children }: { page:Page; onPage:(page:Page)=>void; state:FeedState; children:React.ReactNode }) { return <><header className="topbar"><Brand/><div className="top-status"><DemoBadge/><span className={`connection ${state.toLowerCase()}`}>{state}</span><span className="tagline">SEE. PREDICT. ACT.</span></div></header><nav aria-label="Product navigation">{pages.map((item) => <button key={item} onClick={() => onPage(item)} className={page === item ? 'active' : ''}>{item}</button>)}</nav><main>{children}</main><footer className="app-footer"><strong>RAILMIND</strong> · Railway Intelligence Layer · SEE. PREDICT. ACT. · <span>DEMO / SIMULATION DATA</span></footer></>; }

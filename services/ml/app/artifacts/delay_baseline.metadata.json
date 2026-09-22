@@ -1,0 +1,22 @@
+{
+  "model": "synthetic-interpretable-logistic-ridge",
+  "model_version": "0.2.0-synthetic-dev",
+  "trained_at": "2026-09-14T19:26:48.618201+00:00",
+  "training_data": "synthetic development data only",
+  "accuracy_note": "No real-world accuracy or calibration claim. Validate on authorized historical data before production.",
+  "features": [
+    "historical_delay_minutes",
+    "reliability_gap",
+    "time_of_day",
+    "day_of_week",
+    "weather_severity",
+    "rainfall_mm",
+    "temperature_extreme",
+    "visibility_inverse",
+    "congestion",
+    "active_alerts",
+    "route_distance_km",
+    "route_curvature_score"
+  ],
+  "calibration": "uncalibrated synthetic development baseline"
+}
