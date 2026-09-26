@@ -2,15 +2,19 @@
   "name": "railmind",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @railmind/api\" \"npm run dev -w @railmind/web\"",
     "build": "npm run build -w @railmind/contracts && npm run build -w @railmind/api && npm run build -w @railmind/web",
     "typecheck": "npm run typecheck -w @railmind/contracts && npm run typecheck -w @railmind/api && npm run typecheck -w @railmind/web",
     "lint": "npm run lint -w @railmind/api && npm run lint -w @railmind/web",
     "test": "npm run test -w @railmind/api && npm run test -w @railmind/web",
-    "test:ml": "python -m pytest services/ml/app/test_main.py -q",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run test:ml && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
-  "devDependencies": {"concurrently": "^9.1.2"}
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
 }

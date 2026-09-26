@@ -1,5 +1,20 @@
-import type { Alert, AnalyticsOverview, ApiEnvelope, AssistantReply, DelayPrediction, DelayPredictionInput, DelaySeriesPoint, Route, RouteWeather, Station, SystemHealth, TrainDetail, TrainPosition, WeatherForecast, WeatherObservation } from '@railmind/contracts';
-const baseUrl=import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-async function request<T>(path:string,init?:RequestInit):Promise<T>{const response=await fetch(`${baseUrl}${path}`,{headers:{'content-type':'application/json',...init?.headers},...init});if(!response.ok){const body=await response.json().catch(()=>({error:`Request failed (${response.status})`})) as {error?:string};throw new Error(body.error??`Request failed (${response.status})`);}return (await response.json() as ApiEnvelope<T>).data;}
-export const api={health:()=>request<SystemHealth>('/api/health'),systemHealth:()=>request<SystemHealth>('/api/system/health'),metrics:()=>request<AnalyticsOverview>('/api/analytics/overview').then((overview)=>overview.metrics),overview:()=>request<AnalyticsOverview>('/api/analytics/overview'),delays:()=>request<DelaySeriesPoint[]>('/api/analytics/delays'),trains:(query?:string)=>request<TrainPosition[]>(`/api/trains${query?`?q=${encodeURIComponent(query)}`:''}`),liveTrains:()=>request<TrainPosition[]>('/api/trains/live'),train:(number:string)=>request<TrainDetail>(`/api/trains/${encodeURIComponent(number)}`),stations:(query?:string)=>request<Station[]>(`/api/stations${query?`?q=${encodeURIComponent(query)}`:''}`),station:(code:string)=>request<Station>(`/api/stations/${encodeURIComponent(code)}`),routes:()=>request<Route[]>('/api/routes'),route:(id:string)=>request<Route>(`/api/routes/${encodeURIComponent(id)}`),alerts:()=>request<Alert[]>('/api/alerts'),weather:()=>request<WeatherObservation[]>('/api/weather/current'),forecast:()=>request<WeatherForecast[]>('/api/weather/forecast'),routeWeather:(id:string)=>request<RouteWeather>(`/api/weather/routes/${encodeURIComponent(id)}`),predict:(input:DelayPredictionInput)=>request<DelayPrediction>('/api/predictions/delay',{method:'POST',body:JSON.stringify(input)}),ask:(message:string,conversationId?:string)=>request<AssistantReply>('/api/assistant/messages',{method:'POST',body:JSON.stringify({message,conversationId})}),conversationHistory:(id:string)=>request<AssistantReply['message'][]>(`/api/assistant/conversations/${encodeURIComponent(id)}`),clearConversation:(id:string)=>fetch(`${baseUrl}/api/assistant/conversations/${encodeURIComponent(id)}`,{method:'DELETE'})};
-export const websocketUrl=baseUrl.replace(/^http/,'ws')+'/ws';
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export const api = {
+  health: () => request("/api/health"),
+  systemHealth: () => request("/api/system/health"),
+};
